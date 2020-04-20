@@ -1,3 +1,7 @@
+## Local Changes:
+This repository is completely copied from the original heroku nginx buildpack. (including the readme entries below)
+Only difference is that we've added the   --with-http_stub_status_module to the compile options - so that we can measure nginx queues.
+
 # Heroku Buildpack: NGINX
 
 Nginx-buildpack vendors NGINX inside a dyno and connects NGINX to an app server via UNIX domain sockets.
