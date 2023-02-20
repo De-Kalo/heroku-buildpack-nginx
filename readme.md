@@ -1,6 +1,7 @@
 ## Local Changes:
 This repository is completely copied from the original heroku nginx buildpack. (including the readme entries below)
-Only difference is that we've added the   --with-http_stub_status_module to the compile options - so that we can measure nginx queues.
+Only difference is that we've added the   --with-http_stub_status_module and   --with-http_sub_module  to the compile options 
+so that we can measure nginx queues.
 
 # Heroku Buildpack: NGINX
 
@@ -8,16 +9,16 @@ Nginx-buildpack vendors NGINX inside a dyno and connects NGINX to an app server 
 
 ## Motivation
 
-Some application servers (e.g. Ruby's Unicorn) halt progress when dealing with network I/O. Heroku's Cedar routing stack [buffers only the headers](https://devcenter.heroku.com/articles/http-routing#request-buffering) of inbound requests. (The Cedar router will buffer the headers and body of a response up to 1MB) Thus, the Heroku router engages the dyno during the entire body transfer –from the client to dyno. For applications servers with blocking I/O, the latency per request will be degraded by the content transfer. By using NGINX in front of the application server, we can eliminate a great deal of transfer time from the application server. In addition to making request body transfers more efficient, all other I/O should be improved since the application server need only communicate with a UNIX socket on localhost. Basically, for webservers that are not designed for efficient, non-blocking I/O, we will benefit from having NGINX to handle all I/O operations.
+Some application servers (e.g. Ruby's Unicorn) halt progress when dealing with network I/O. Heroku's routing stack [buffers only the headers](https://devcenter.heroku.com/articles/http-routing#request-buffering) of inbound requests. (The router will buffer the headers and body of a response up to 1MB) Thus, the Heroku router engages the dyno during the entire body transfer –from the client to dyno. For applications servers with blocking I/O, the latency per request will be degraded by the content transfer. By using NGINX in front of the application server, we can eliminate a great deal of transfer time from the application server. In addition to making request body transfers more efficient, all other I/O should be improved since the application server need only communicate with a UNIX socket on localhost. Basically, for webservers that are not designed for efficient, non-blocking I/O, we will benefit from having NGINX to handle all I/O operations.
 
 ## Versions
 
-### Cedar-14 (deprecated)
-* NGINX Version: 1.9.5
-### Heroku 16
-* NGINX Version: 1.9.5
 ### Heroku 18
-* NGINX Version: 1.16.1
+* NGINX Version: 1.20.1
+### Heroku 20
+* NGINX Version: 1.20.1
+### Heroku 22
+* NGINX Version: 1.20.1
 
 ## Requirements (Proxy Mode)
 
@@ -72,11 +73,17 @@ $ cat Procfile
 web: bin/start-nginx bundle exec unicorn -c config/unicorn.rb
 ```
 
+#### nginx debug mode
+```bash
+$ cat Procfile
+web: bin/start-nginx-debug bundle exec unicorn -c config/unicorn.rb
+```
+
 ### nginx Solo Mode
 
 nginx-buildpack provides a command named `bin/start-nginx-solo`. This is for you if you don't want to run an additional app server on the Dyno.
 This mode requires you to put a `config/nginx.conf.erb` in your app code. You can start by coping the [sample config for nginx solo mode](config/nginx-solo-sample.conf.erb).
-For example, to get NGINX and Unicorn up and running:
+To get NGINX Solo Mode running:
 
 ```bash
 $ cat Procfile
@@ -104,17 +111,37 @@ $ heroku config:set NGINX_WORKER_CONNECTIONS=2048
 
 You can provide your own NGINX config by creating a file named `nginx.conf.erb` in the config directory of your app. Start by copying the buildpack's [default config file](config/nginx.conf.erb).
 
+### Force SSL
+
+You can add a redirect/force SSL based on Heroku headers. Full, commented example in the [default config file](config/nginx.conf.erb) or in the [nextjs with forceSSL config file](config/nginx-nextjs-with-forcessl.conf.erb).
+
+```
+if ($http_x_forwarded_proto != "https") {
+  return 301 https://$host$request_uri;
+}
+```
+
 ### Customizable NGINX Compile Options
 
-See [scripts/build_nginx](scripts/build_nginx) for the build steps. Configuring is as easy as changing the "./configure" options.
+This requires a clone of this repository and [Docker](https://www.docker.com/). All you need to do is have Docker setup and running on your machine. The [`Makefile`](Makefile) will take care of the rest.
 
-You can run the builds in a [Docker](https://www.docker.com/) container:
+Configuring is as easy as changing the options passed to `./configure` in [scripts/build_nginx](scripts/build_nginx).
+
+Run the builds in a container via:
 
 ```
-$ make build # It outputs the latest builds to bin/cedar-*
+$ make build
 ```
 
-To test the builds:
+The binaries will be packed into `tar` files and placed in the repository's root directory. Commit the changes and push your repository.
+
+Finally update your app to use your custom buildpack on Heroku either at https://dashboard.heroku.com/apps/#{YOUR_APP_NAME}/settings or via the Heroku CLI via:
+
+```
+heroku buildpacks:set #{YOUR_GIT_REPO_CLONE}
+```
+
+To test the builds locally:
 
 ```
 $ make shell
@@ -128,7 +155,7 @@ The buildpack will not start NGINX until a file has been written to `/tmp/app-in
 
 ## Setup
 
-Here are 2 setup examples. One example for a new app, another for an existing app. In both cases, we are working with ruby & unicorn. Keep in mind that this buildpack is not ruby specific.
+Here are 2 setup examples. One example for a new app, another for an existing app. In both cases, we are working with ruby & unicorn. Keep in mind that this buildpack is not ruby specific. However if your app does happen to use Ruby, make sure to add the NGINX buildpack **after** the Ruby buildpack, so the NGINX buildpack doesn't have to install its own redundant copy of Ruby for the ERB templating feature.
 
 ### Existing App
 
@@ -160,11 +187,10 @@ $ git commit -m 'Update unicorn config to listen on NGINX socket.'
 ```
 Deploy Changes
 ```bash
-$ git push heroku master
+$ git push heroku main
 ```
 
 ### New App
-
 ```bash
 $ mkdir myapp; cd myapp
 $ git init
@@ -205,10 +231,10 @@ Create & Push Heroku App:
 ```bash
 $ heroku create
 $ heroku buildpacks:add heroku/ruby
-$ heroku buildpacks:add https://github.com/heroku/heroku-buildpack-nginx
+$ heroku buildpacks:add heroku-community/nginx
 $ git add .
 $ git commit -am "init"
-$ git push heroku master
+$ git push heroku main
 $ heroku logs -t
 ```
 Visit App
