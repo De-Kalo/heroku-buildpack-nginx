@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10] - 2026-07-01
+### Changes
+- [heroku-24] add support for Heroku-24 (Makefile `build-heroku-24` target; nginx built with `stub_status`/`sub_module` as before)
+- Vendored Ruby download is now architecture-aware for heroku-24+ (heroku-22 path unchanged)
+- build_nginx: fetch zlib from `zlib.net/fossils` (old versions were removed from the root path, causing 404s)
+
 ## [1.9] - 2022-06-21
 ### Changes
 - If a Ruby installation is not found (required for the ERB templating feature), this buildpack will now install its own, to ensure it works on Heroku-22.
