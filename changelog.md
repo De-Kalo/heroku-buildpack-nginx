@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11] - 2026-07-02
+### Changes
+- [heroku-24] fix `nginx-heroku-24.tgz` architecture: the binary merged in 1.10 was accidentally built for arm64 instead of amd64, causing `Exec format error` on real Heroku dynos. Rebuilt for amd64 and verified via ELF header inspection.
+
 ## [1.10] - 2026-07-01
 ### Changes
 - [heroku-24] add support for Heroku-24 (Makefile `build-heroku-24` target; nginx built with `stub_status`/`sub_module` as before)
